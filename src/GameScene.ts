@@ -39,7 +39,7 @@ export class GameScene extends Phaser.Scene {
     this.state = 'ready';
     this.distance = 0;
     this.nextHazardDistance = 1400;
-    this.nextCoinDistance = 900;
+    this.nextCoinDistance = 1400;
     this.elapsed = 0;
     this.hazards = [];
     this.coins = [];
@@ -52,8 +52,8 @@ export class GameScene extends Phaser.Scene {
 
     this.road = this.add.rectangle(0, 0, 0, 0, 0x30254a)
       .setStrokeStyle(4, 0x70588b)
-      .setDepth(-1);
-    this.track = this.add.graphics();
+      .setDepth(-3);
+    this.track = this.add.graphics().setDepth(-2);
     this.drawTrack();
 
     this.titleText = this.add.text(this.scale.width / 2, this.scale.height * 0.01, 'SCRAMBLY TIMING', {
@@ -61,31 +61,31 @@ export class GameScene extends Phaser.Scene {
       color: '#F58324',
       fontStyle: 'bold',
       letterSpacing: 2,
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(10);
 
     this.distanceText = this.add.text(this.scale.width / 2, this.scale.height * 0.11, 'DISTANCE 0 m', {
       fontSize: '16px',
       color: '#C7B9D9',
       fontStyle: 'bold',
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(10);
     this.coinText = this.add.text(this.scale.width * 0.82, this.scale.height * 0.11, 'COINS 0', {
       fontSize: '16px',
       color: '#FFD54A',
       fontStyle: 'bold',
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(10);
 
     this.runner = new RunnerPlayer(this, this.scale.width / 2, this.scale.height * 0.82);
     this.stateText = this.add.text(this.scale.width / 2, this.scale.height * 0.83, 'TAP TO RUN', {
       fontSize: '23px',
       color: '#F58324',
       fontStyle: 'bold',
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(10);
     this.instructionText = this.add.text(
       this.scale.width / 2,
       this.scale.height * 0.90,
       'Stop to time the moving hazards',
       { fontSize: '14px', color: '#FFF6E8' },
-    ).setOrigin(0.5);
+    ).setOrigin(0.5).setDepth(10);
 
     this.ctaButton = this.add.rectangle(
       this.scale.width / 2,
@@ -110,7 +110,7 @@ export class GameScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
 
     this.spawnHazard(600);
-    this.spawnCoin(550);
+    this.spawnCoin(600);
     this.refreshLayout();
   }
 
@@ -138,7 +138,7 @@ export class GameScene extends Phaser.Scene {
     this.runner.setRunning(this.state === 'running');
 
     for (const hazard of [...this.hazards]) {
-      const { passed } = hazard.update(this.distance, delta, width, height - 0.05 * height);
+      const { passed } = hazard.update(this.distance, delta, width, height);
 
       if (this.state === 'running' || this.state === 'stopped') {
         if (Phaser.Geom.Intersects.RectangleToRectangle(
@@ -156,18 +156,18 @@ export class GameScene extends Phaser.Scene {
     }
 
     for (const coin of [...this.coins]) {
-      const progress = 1 - (coin.spawnDistance - this.distance) / 800;
-      const scale = (0.25 + Math.max(0, progress) * 0.65) * 0.65;
-      const y = height * 0.16 + (height * 0.76 - height * 0.16) * progress;
-      coin.setPosition(centerX, y, scale);
+      const { passed } = coin.update(this.distance, delta, width, height);
 
-      if (this.state === 'running' && progress >= 0.9 && progress <= 1.08) {
+      if ((this.state === 'running' || this.state === 'stopped') && Phaser.Geom.Intersects.RectangleToRectangle(
+        this.runner.getCollisionBounds(),
+        coin.getCollisionBounds(),
+      )) {
         coin.collect();
         this.coinCount += 1;
         this.coinText.setText(`COINS ${this.coinCount}`);
         this.coins = this.coins.filter((item) => item !== coin);
-      } else if (progress > 1.08) {
-        coin.collect();
+      } else if (passed) {
+        coin.destroy();
         this.coins = this.coins.filter((item) => item !== coin);
       }
     }

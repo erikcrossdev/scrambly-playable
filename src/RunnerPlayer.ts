@@ -14,7 +14,9 @@ export class RunnerPlayer {
   private isDefeated = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
-    this.sprite = scene.add.sprite(x, y, 'runner', '0').setScale(RunnerPlayer.displayScale);
+    this.sprite = scene.add.sprite(x, y, 'runner', '0')
+      .setScale(RunnerPlayer.displayScale)
+      .setDepth(0);
   }
 
   setPosition(x: number, y: number) {

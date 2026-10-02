@@ -1,18 +1,33 @@
 import Phaser from 'phaser';
 import coinSprite from './assets/coin.png';
+import { TrackObject, type TrackMovementConfig } from './TrackObject';
 
 const textureKey = 'coin-sheet';
 const animationKey = 'coin-spin';
 const frameSize = 64;
 const frameCount = 8;
 
-export class Coin {
-  private readonly sprite: Phaser.GameObjects.Sprite;
-  readonly spawnDistance: number;
+const coinHeight = 64;
 
-  constructor(scene: Phaser.Scene, spawnDistance: number) {
-    this.spawnDistance = spawnDistance;
-    this.sprite = scene.add.sprite(0, 0, textureKey, '0').setScale(0.65);
+
+export class Coin extends TrackObject {
+  static readonly movementConfig: TrackMovementConfig = {
+    curve: Math.sin,
+    range: 0.72,
+    baseSpeed: 0.9,
+    maxSpeedMultiplier: 1.15,
+    accelerationZone: 0.15,
+  };
+
+  private readonly sprite: Phaser.GameObjects.Sprite;
+
+  constructor(
+    scene: Phaser.Scene,
+    spawnDistance: number,
+    movementConfig: TrackMovementConfig = Coin.movementConfig,
+  ) {
+    super(spawnDistance, movementConfig);
+    this.sprite = scene.add.sprite(0, 0, textureKey, '0').setScale(0.15).setDepth(1);
     this.sprite.play(animationKey);
   }
 
@@ -45,11 +60,24 @@ export class Coin {
     }
   }
 
-  setPosition(x: number, y: number, scale: number) {
+  protected setVisualTransform(x: number, y: number, scale: number) {
     this.sprite.setPosition(x, y).setScale(scale);
   }
 
+ getCollisionBounds() {
+     return new Phaser.Geom.Rectangle(
+       this.x - (frameSize / 2) * this.scale,
+       this.y - (coinHeight / 2) * this.scale,
+       frameSize * this.scale,
+       coinHeight * this.scale,
+     );
+   }
+
   collect() {
+    this.sprite.destroy();
+  }
+
+  destroy() {
     this.sprite.destroy();
   }
 }
