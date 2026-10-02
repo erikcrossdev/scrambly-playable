@@ -14,7 +14,7 @@ export class Coin extends TrackObject {
   static readonly movementConfig: TrackMovementConfig = {
     curve: Math.sin,
     range: 0.72,
-    baseSpeed: 0.9,
+    baseSpeed: 2.6,
     maxSpeedMultiplier: 1.15,
     accelerationZone: 0.15,
     scaleCurve: (progress) => 0.18 + Phaser.Math.Clamp(progress, 0, 1) * 0.32,

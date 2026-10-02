@@ -26,6 +26,9 @@ export class GameScene extends Phaser.Scene {
   private instructionText!: Phaser.GameObjects.Text;
   private ctaButton!: Phaser.GameObjects.Rectangle;
   private ctaText!: Phaser.GameObjects.Text;
+  private destroyHeight = 50;
+  private spawnCoinsDistance = 600;
+  private spawnHazardsDistance = 600;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -111,8 +114,8 @@ export class GameScene extends Phaser.Scene {
     this.scale.on('resize', this.handleResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
 
-    this.spawnHazard(600);
-    this.spawnCoin(600);
+    this.spawnHazard(this.spawnHazardsDistance);
+    this.spawnCoin(this.spawnCoinsDistance);
     this.refreshLayout();
   }
 
@@ -124,13 +127,13 @@ export class GameScene extends Phaser.Scene {
       this.distanceText.setText(`DISTANCE ${Math.floor(this.distance / 100)} m`);
 
       while (this.distance >= this.nextHazardDistance) {
-        this.spawnHazard(this.distance + 650, this.spawnPairedHazards);
+        this.spawnHazard(this.distance + this.spawnHazardsDistance, this.spawnPairedHazards);
         this.spawnPairedHazards = !this.spawnPairedHazards;
-        this.nextHazardDistance += 1400;
+        this.nextHazardDistance += this.spawnHazardsDistance;
       }
       while (this.distance >= this.nextCoinDistance) {
-        this.spawnCoin(this.distance + 650);
-        this.nextCoinDistance += 520;
+        this.spawnCoin(this.distance + this.spawnCoinsDistance);
+        this.nextCoinDistance += this.spawnCoinsDistance;
       }
     }
 
@@ -141,7 +144,7 @@ export class GameScene extends Phaser.Scene {
     this.runner.setRunning(this.state === 'running');
 
     for (const hazard of [...this.hazards]) {
-      const { passed } = hazard.update(this.distance, delta, width, height);
+      const { passed } = hazard.update(this.distance, delta, width, height-this.destroyHeight);
 
       if (this.state === 'running' || this.state === 'stopped') {
         if (Phaser.Geom.Intersects.RectangleToRectangle(
@@ -159,7 +162,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     for (const coin of [...this.coins]) {
-      const { passed } = coin.update(this.distance, delta, width, height);
+      const { passed } = coin.update(this.distance, delta, width, height-this.destroyHeight);
 
       if ((this.state === 'running' || this.state === 'stopped') && Phaser.Geom.Intersects.RectangleToRectangle(
         this.runner.getCollisionBounds(),
