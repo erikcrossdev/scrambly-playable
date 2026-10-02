@@ -17,6 +17,7 @@ export class Coin extends TrackObject {
     baseSpeed: 0.9,
     maxSpeedMultiplier: 1.15,
     accelerationZone: 0.15,
+    scaleCurve: (progress) => 0.18 + Phaser.Math.Clamp(progress, 0, 1) * 0.32,
   };
 
   private readonly sprite: Phaser.GameObjects.Sprite;

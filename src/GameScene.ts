@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { Hazard } from './Hazard';
+import { CenterSweepHazard, Hazard, OscillatingHazard } from './Hazard';
 import { RunnerPlayer } from './RunnerPlayer';
 import { Coin } from './Coin';
 
@@ -10,6 +10,7 @@ export class GameScene extends Phaser.Scene {
   private state: GameState = 'ready';
   private distance = 0;
   private nextHazardDistance = 1000;
+  private spawnPairedHazards = true;
   private nextCoinDistance = 900;
   private elapsed = 0;
   private hazards: Hazard[] = [];
@@ -39,6 +40,7 @@ export class GameScene extends Phaser.Scene {
     this.state = 'ready';
     this.distance = 0;
     this.nextHazardDistance = 1400;
+    this.spawnPairedHazards = true;
     this.nextCoinDistance = 1400;
     this.elapsed = 0;
     this.hazards = [];
@@ -122,7 +124,8 @@ export class GameScene extends Phaser.Scene {
       this.distanceText.setText(`DISTANCE ${Math.floor(this.distance / 100)} m`);
 
       while (this.distance >= this.nextHazardDistance) {
-        this.spawnHazard(this.distance + 650);
+        this.spawnHazard(this.distance + 650, this.spawnPairedHazards);
+        this.spawnPairedHazards = !this.spawnPairedHazards;
         this.nextHazardDistance += 1400;
       }
       while (this.distance >= this.nextCoinDistance) {
@@ -173,8 +176,16 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private spawnHazard(spawnDistance: number) {
-    this.hazards.push(new Hazard(this, spawnDistance));
+  private spawnHazard(spawnDistance: number, paired = false) {
+    if (paired) {
+      this.hazards.push(
+        new CenterSweepHazard(this, spawnDistance, -1),
+        new CenterSweepHazard(this, spawnDistance, 1),
+      );
+      return;
+    }
+
+    this.hazards.push(new OscillatingHazard(this, spawnDistance));
   }
 
   private spawnCoin(spawnDistance: number) {
