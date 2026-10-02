@@ -2,7 +2,19 @@ import Phaser from 'phaser';
 import { CenterSweepHazard, Hazard, OscillatingHazard } from './Hazard';
 import { RunnerPlayer } from './RunnerPlayer';
 import { Coin } from './Coin';
+import { RenderMessages } from './RenderMessages';
+import { PlayerRecord } from './PlayerRecord';
+import bestScoreSfx from './assets/SFX/bestScore.wav';
+import coinsSfx from './assets/SFX/coins.wav';
+import collisionSfx from './assets/SFX/colision.wav';
+import gameOverSfx from './assets/SFX/GameOver.wav';
 
+const soundKeys = {
+  bestScore: 'best-score',
+  coin: 'coin-collected',
+  collision: 'hazard-collision',
+  gameOver: 'game-over',
+} as const;
 
 type GameState = 'ready' | 'running' | 'stopped' | 'gameover';
 
@@ -19,16 +31,17 @@ export class GameScene extends Phaser.Scene {
   private track!: Phaser.GameObjects.Graphics;
   private road!: Phaser.GameObjects.Rectangle;
   private runner!: RunnerPlayer;
-  private titleText!: Phaser.GameObjects.Text;
-  private distanceText!: Phaser.GameObjects.Text;
-  private coinText!: Phaser.GameObjects.Text;
-  private stateText!: Phaser.GameObjects.Text;
-  private instructionText!: Phaser.GameObjects.Text;
-  private ctaButton!: Phaser.GameObjects.Rectangle;
-  private ctaText!: Phaser.GameObjects.Text;
+  private messages!: RenderMessages;
+  private playerRecord!: PlayerRecord;
   private destroyHeight = 50;
   private spawnCoinsDistance = 600;
   private spawnHazardsDistance = 600;
+  private audioInteracted = false;
+  private userMuted = false;
+  private documentVisible = true;
+  private windowFocused = true;
+  private inactivePauseApplied = false;
+  private discardNextDelta = false;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -37,9 +50,16 @@ export class GameScene extends Phaser.Scene {
   preload() {
     RunnerPlayer.preload(this);
     Coin.preload(this);
+    Hazard.preload(this);
+    this.load.audio(soundKeys.bestScore, bestScoreSfx);
+    this.load.audio(soundKeys.coin, coinsSfx);
+    this.load.audio(soundKeys.collision, collisionSfx);
+    this.load.audio(soundKeys.gameOver, gameOverSfx);
   }
 
   create() {
+    this.inactivePauseApplied = false;
+    this.discardNextDelta = false;
     this.state = 'ready';
     this.distance = 0;
     this.nextHazardDistance = 1400;
@@ -51,6 +71,10 @@ export class GameScene extends Phaser.Scene {
     this.coinCount = 0;
 
     this.cameras.main.setBackgroundColor('#201338');
+    this.sound.pauseOnBlur = false;
+    this.documentVisible = document.visibilityState === 'visible';
+    this.windowFocused = document.hasFocus();
+    this.applyAudioState();
 
     RunnerPlayer.createAnimation(this);
     Coin.createAnimation(this);
@@ -61,70 +85,46 @@ export class GameScene extends Phaser.Scene {
     this.track = this.add.graphics().setDepth(-2);
     this.drawTrack();
 
-    this.titleText = this.add.text(this.scale.width / 2, this.scale.height * 0.01, 'SCRAMBLY TIMING', {
-      fontSize: '24px',
-      color: '#F58324',
-      fontStyle: 'bold',
-      letterSpacing: 2,
-    }).setOrigin(0.5).setDepth(10);
-
-    this.distanceText = this.add.text(this.scale.width / 2, this.scale.height * 0.11, 'DISTANCE 0 m', {
-      fontSize: '16px',
-      color: '#C7B9D9',
-      fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(10);
-    this.coinText = this.add.text(this.scale.width * 0.82, this.scale.height * 0.11, 'COINS 0', {
-      fontSize: '16px',
-      color: '#FFD54A',
-      fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(10);
+    this.playerRecord = new PlayerRecord();
+    this.messages = new RenderMessages(this);
+    this.messages.setBestScore(this.playerRecord.getBestScore());
+    this.messages.setMuted(this.userMuted);
 
     this.runner = new RunnerPlayer(this, this.scale.width / 2, this.scale.height * 0.82);
-    this.stateText = this.add.text(this.scale.width / 2, this.scale.height * 0.83, 'TAP TO RUN', {
-      fontSize: '23px',
-      color: '#F58324',
-      fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(10);
-    this.instructionText = this.add.text(
-      this.scale.width / 2,
-      this.scale.height * 0.90,
-      'Stop to time the moving hazards',
-      { fontSize: '14px', color: '#FFF6E8' },
-    ).setOrigin(0.5).setDepth(10);
-
-    this.ctaButton = this.add.rectangle(
-      this.scale.width / 2,
-      this.scale.height * 0.925,
-      Math.min(220, this.scale.width * 0.75),
-      40,
-      0xf58324,
-    ).setInteractive({ useHandCursor: true });
-    this.ctaText = this.add.text(this.scale.width / 2, this.scale.height * 0.925, 'Explore Scrambly', {
-      fontSize: '18px',
-      color: '#FFF6E8',
-      fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(1);
 
     this.input.on('pointerdown', this.handlePointerAction, this);
     this.input.keyboard?.on('keydown-SPACE', this.handleAction, this);
-    this.ctaButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Event) => {
+    this.messages.ctaButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Event) => {
       event.stopPropagation();
       window.open('https://scrambly.io/', '_blank', 'noopener,noreferrer');
     });
+    this.messages.muteButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Event) => {
+      event.stopPropagation();
+      this.toggleMute();
+    });
     this.scale.on('resize', this.handleResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
+    document.addEventListener('visibilitychange', this.handleVisibilityChange);
+    window.addEventListener('blur', this.handleWindowBlur);
+    window.addEventListener('focus', this.handleWindowFocus);
 
     this.spawnHazard(this.spawnHazardsDistance);
     this.spawnCoin(this.spawnCoinsDistance);
     this.refreshLayout();
+    this.updatePageActivity();
   }
 
   update(_time: number, delta: number) {
+    if (this.discardNextDelta) {
+      this.discardNextDelta = false;
+      return;
+    }
+
     this.elapsed += delta / 1000;
 
     if (this.state === 'running') {
       this.distance += delta * 0.18;
-      this.distanceText.setText(`DISTANCE ${Math.floor(this.distance / 100)} m`);
+      this.messages.setDistance(this.distance);
 
       while (this.distance >= this.nextHazardDistance) {
         this.spawnHazard(this.distance + this.spawnHazardsDistance, this.spawnPairedHazards);
@@ -151,7 +151,10 @@ export class GameScene extends Phaser.Scene {
           this.runner.getCollisionBounds(),
           hazard.getCollisionBounds(),
         )) {
+          hazard.playCollisionParticles(0xffb1a2, 22);
+          this.playSound(soundKeys.collision);
           this.endRun();
+          break;
         }
       }
 
@@ -168,9 +171,11 @@ export class GameScene extends Phaser.Scene {
         this.runner.getCollisionBounds(),
         coin.getCollisionBounds(),
       )) {
+        coin.playCollisionParticles(0xffd84d, 18);
+        this.playSound(soundKeys.coin);
         coin.collect();
         this.coinCount += 1;
-        this.coinText.setText(`COINS ${this.coinCount}`);
+        this.messages.setCoinCount(this.coinCount);
         this.coins = this.coins.filter((item) => item !== coin);
       } else if (passed) {
         coin.destroy();
@@ -196,6 +201,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleAction() {
+    this.enableAudioAfterInteraction();
     if (this.state === 'gameover') {
       this.scene.restart();
       return;
@@ -206,7 +212,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handlePointerAction(_pointer: Phaser.Input.Pointer, currentlyOver: Phaser.GameObjects.GameObject[]) {
-    if (currentlyOver.includes(this.ctaButton)) return;
+    if (currentlyOver.includes(this.messages.ctaButton) || currentlyOver.includes(this.messages.muteButton)) return;
+    this.enableAudioAfterInteraction();
     this.handleAction();
   }
 
@@ -215,18 +222,85 @@ export class GameScene extends Phaser.Scene {
 
     this.state = 'gameover';
     this.runner.setDefeated();
-    this.stateText.setText('RUN ENDED').setColor('#FF7777');
-    this.instructionText.setText('Tap or click to restart');
+    const result = this.playerRecord.recordRun({
+      distance: Math.floor(this.distance / 100),
+      coins: this.coinCount,
+    });
+    if (result.isNewBest) this.playSound(soundKeys.bestScore);
+    if (result.score) this.messages.setBestScore(result.score);
+    this.playSound(soundKeys.gameOver);
+    this.messages.showDefeated();
+  }
+
+  private enableAudioAfterInteraction() {
+    if (this.audioInteracted) return;
+
+    this.audioInteracted = true;
+    this.applyAudioState();
+  }
+
+  private toggleMute() {
+    this.enableAudioAfterInteraction();
+    this.userMuted = !this.userMuted;
+    this.messages.setMuted(this.userMuted);
+    this.applyAudioState();
+  }
+
+  private playSound(key: string) {
+    if (!this.audioInteracted || this.userMuted || !this.isPageActive() || this.sound.locked) return;
+    this.sound.play(key);
+  }
+
+  private applyAudioState() {
+    const muted = this.userMuted || !this.audioInteracted || !this.isPageActive();
+    this.sound.mute = muted;
+
+    if (muted) {
+      this.sound.pauseAll();
+    } else {
+      this.sound.resumeAll();
+    }
+  }
+
+  private isPageActive() {
+    return this.documentVisible && this.windowFocused;
+  }
+
+  private handleVisibilityChange = () => {
+    this.documentVisible = document.visibilityState === 'visible';
+    this.updatePageActivity();
+  };
+
+  private handleWindowBlur = () => {
+    this.windowFocused = false;
+    this.updatePageActivity();
+  };
+
+  private handleWindowFocus = () => {
+    this.windowFocused = true;
+    this.updatePageActivity();
+  };
+
+  private updatePageActivity() {
+    const active = this.isPageActive();
+    this.applyAudioState();
+
+    if (!active && !this.inactivePauseApplied) {
+      this.inactivePauseApplied = true;
+      this.scene.pause();
+    } else if (active && this.inactivePauseApplied) {
+      this.inactivePauseApplied = false;
+      this.discardNextDelta = true;
+      this.scene.resume();
+    }
   }
 
   private updatePrompt() {
     if (this.state === 'running') {
-      this.stateText.setText('RUNNING — TAP TO STOP').setColor('#F58324');
-      this.instructionText.setText('Watch the hazard, then tap to move');
+      this.messages.showRunning();
       return;
     }
-    this.stateText.setText('STOPPED — TAP TO RUN').setColor('#8BE0B2');
-    this.instructionText.setText('Hazards keep moving while you wait');
+    this.messages.showStopped();
   }
 
   private drawTrack() {
@@ -246,15 +320,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private refreshLayout() {
-    const { width, height } = this.scale;
-    this.titleText.setPosition(width / 2, height * 0.035);
-    this.distanceText.setPosition(width * 0.35, height * 0.11);
-    this.coinText.setPosition(width * 0.78, height * 0.11);
-    this.stateText.setPosition(width / 2, height * 0.88);
-    this.instructionText.setPosition(width / 2, height * 0.90);
-    this.ctaButton.setPosition(width / 2, height * 0.95)
-      .setSize(Math.min(220, width * 0.75), 40);
-    this.ctaText.setPosition(width / 2, height * 0.95);
+    this.messages.layout();
   }
 
   private handleResize() {
@@ -266,5 +332,9 @@ export class GameScene extends Phaser.Scene {
     this.input.off('pointerdown', this.handlePointerAction, this);
     this.input.keyboard?.off('keydown-SPACE', this.handleAction, this);
     this.scale.off('resize', this.handleResize, this);
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    window.removeEventListener('blur', this.handleWindowBlur);
+    window.removeEventListener('focus', this.handleWindowFocus);
+    this.applyAudioState();
   }
 }

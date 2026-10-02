@@ -11,6 +11,7 @@ export interface TrackMovementConfig {
 }
 
 export abstract class TrackObject {
+  private static readonly impactParticleTexture = 'impact-particle';
   readonly spawnDistance: number;
   protected progress = 0;
   protected scale = 1;
@@ -18,13 +19,16 @@ export abstract class TrackObject {
   protected y = 0;
 
   private readonly movementConfig: TrackMovementConfig;
+  private readonly scene: Phaser.Scene;
   private phase: number;
 
   protected constructor(
+    scene: Phaser.Scene,
     spawnDistance: number,
     movementConfig: TrackMovementConfig,
     initialPhase = Math.random() * Math.PI * 2,
   ) {
+    this.scene = scene;
     this.spawnDistance = spawnDistance;
     this.movementConfig = movementConfig;
     this.phase = initialPhase;
@@ -57,6 +61,36 @@ export abstract class TrackObject {
     this.setVisualTransform(this.x, this.y, this.scale);
 
     return { passed: this.progress > 1.18 };
+  }
+
+  playCollisionParticles(tint: number, quantity: number) {
+    if (!this.scene.textures.exists(TrackObject.impactParticleTexture)) {
+      const graphics = this.scene.make.graphics({ x: 0, y: 0 }, false);
+      graphics.fillStyle(0xffffff);
+      graphics.fillCircle(4, 4, 4);
+      graphics.generateTexture(TrackObject.impactParticleTexture, 8, 8);
+      graphics.destroy();
+    }
+
+    const bounds = this.getCollisionBounds();
+    const emitter = this.scene.add.particles(
+      bounds.centerX,
+      bounds.centerY,
+      TrackObject.impactParticleTexture,
+      {
+        emitting: false,
+        lifespan: { min: 300, max: 550 },
+        speed: { min: 55, max: 155 },
+        angle: { min: 0, max: 360 },
+        scale: { start: 0.7, end: 0 },
+        alpha: { start: 1, end: 0 },
+        tint,
+        quantity,
+      },
+    ).setDepth(3);
+
+    emitter.explode(quantity);
+    this.scene.time.delayedCall(600, () => emitter.destroy());
   }
 
   protected abstract setVisualTransform(x: number, y: number, scale: number): void;

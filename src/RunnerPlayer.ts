@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import foxBack from './assets/foxBack.png';
-import foxDefeated from './assets/fox_defeated.png';
+import foxBack from './assets/sprites/foxBack.png';
+import foxDefeated from './assets/sprites/fox_defeated.png';
 
 export class RunnerPlayer {
   private static readonly animationKey = 'runner-run';

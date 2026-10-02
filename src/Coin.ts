@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import coinSprite from './assets/coin.png';
+import coinSprite from './assets/sprites/coin.png';
 import { TrackObject, type TrackMovementConfig } from './TrackObject';
 
 const textureKey = 'coin-sheet';
@@ -14,9 +14,9 @@ export class Coin extends TrackObject {
   static readonly movementConfig: TrackMovementConfig = {
     curve: Math.sin,
     range: 0.72,
-    baseSpeed: 2.6,
-    maxSpeedMultiplier: 1.15,
-    accelerationZone: 0.15,
+    baseSpeed: 2.8,
+    maxSpeedMultiplier: 1.45,
+    accelerationZone: 0.55,
     scaleCurve: (progress) => 0.18 + Phaser.Math.Clamp(progress, 0, 1) * 0.32,
   };
 
@@ -27,7 +27,7 @@ export class Coin extends TrackObject {
     spawnDistance: number,
     movementConfig: TrackMovementConfig = Coin.movementConfig,
   ) {
-    super(spawnDistance, movementConfig);
+    super(scene, spawnDistance, movementConfig);
     this.sprite = scene.add.sprite(0, 0, textureKey, '0').setScale(0.15).setDepth(1);
     this.sprite.play(animationKey);
   }
