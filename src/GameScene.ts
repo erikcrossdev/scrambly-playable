@@ -50,6 +50,9 @@ export class GameScene extends Phaser.Scene {
     RunnerPlayer.createAnimation(this);
     Coin.createAnimation(this);
 
+    this.road = this.add.rectangle(0, 0, 0, 0, 0x30254a)
+      .setStrokeStyle(4, 0x70588b)
+      .setDepth(-1);
     this.track = this.add.graphics();
     this.drawTrack();
 
@@ -105,6 +108,7 @@ export class GameScene extends Phaser.Scene {
       alert('CTA clicked — demo only');
     });
     this.scale.on('resize', this.handleResize, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
 
     this.spawnHazard(600);
     this.spawnCoin(550);
@@ -194,9 +198,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private endRun() {
+    if (this.state === 'gameover') return;
+
     this.state = 'gameover';
     this.stateText.setText('RUN ENDED').setColor('#FF7777');
-    this.instructionText.setText('Tap anywhere to try again');
+    this.instructionText.setText('Tap or click to restart');
   }
 
   private updatePrompt() {
@@ -216,9 +222,6 @@ export class GameScene extends Phaser.Scene {
     const roadCenterY = height * 0.5;
     const trackTop = height * 0.14;
     const trackBottom = height * 0.86;
-    if (!this.road) {
-      this.road = this.add.rectangle(0, 0, 0, 0, 0x30254a).setStrokeStyle(4, 0x70588b).setDepth(-1);
-    }
     this.road.setPosition(width / 2, roadCenterY).setSize(roadWidth, roadHeight);
     this.track.clear();
     this.track.lineStyle(2, 0x70588b, 0.65);
@@ -243,5 +246,11 @@ export class GameScene extends Phaser.Scene {
   private handleResize() {
     this.drawTrack();
     this.refreshLayout();
+  }
+
+  private handleShutdown() {
+    this.input.off('pointerdown', this.handlePointerAction, this);
+    this.input.keyboard?.off('keydown-SPACE', this.handleAction, this);
+    this.scale.off('resize', this.handleResize, this);
   }
 }
