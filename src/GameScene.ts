@@ -227,9 +227,14 @@ export class GameScene extends Phaser.Scene {
       distance: Math.floor(this.distance / 100),
       coins: this.coinCount,
     });
-    if (result.showBestScoreCta) this.playSound(soundKeys.bestScore);
+    if (result.showBestScoreCta) {
+        this.playSound(soundKeys.bestScore);
+    }else{
+        this.playSound(soundKeys.gameOver,0.2);
+    }
+
     if (result.score) this.messages.setBestScore(result.score);
-    this.playSound(soundKeys.gameOver);
+    
     this.messages.showDefeated(result);
   }
 
@@ -247,8 +252,12 @@ export class GameScene extends Phaser.Scene {
     this.applyAudioState();
   }
 
-  private playSound(key: string) {
+  private playSound(key: string, vol: number = 1) {
     if (!this.audioInteracted || this.userMuted || !this.isPageActive() || this.sound.locked) return;
+    if (key === soundKeys.gameOver) {
+      this.sound.play(key, { volume: vol });
+      return;
+    }
     this.sound.play(key);
   }
 

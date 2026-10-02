@@ -45,13 +45,13 @@ export class RenderMessages {
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(10);
 
-    this.muteButton = scene.add.text(width * 0.84, height * 0.035, 'SFX ON', {
+    this.muteButton = scene.add.text(width - 16, height - 16, 'SFX ON', {
       fontSize: '12px',
       color: '#FFF6E8',
       fontStyle: 'bold',
       backgroundColor: '#30254a',
       padding: { x: 7, y: 5 },
-    }).setOrigin(0.5).setDepth(11).setInteractive({ useHandCursor: true });
+    }).setOrigin(1, 1).setDepth(11).setInteractive({ useHandCursor: true });
 
     this.stateText = scene.add.text(width / 2, height * 0.83, 'TAP TO RUN', {
       fontSize: '23px',
@@ -146,7 +146,7 @@ export class RenderMessages {
   layout() {
     const { width, height } = this.scene.scale;
     this.titleText.setPosition(width / 2, height * 0.035);
-    this.muteButton.setPosition(width * 0.84, height * 0.035);
+    this.muteButton.setPosition(width - 16, height - 16);
     this.bestScoreText.setPosition(width / 2, height * 0.075);
     this.distanceText.setPosition(width * 0.35, height * 0.13);
     this.coinText.setPosition(width * 0.78, height * 0.13);
