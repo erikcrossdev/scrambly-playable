@@ -11,9 +11,9 @@ export interface HazardMovementConfig {
 const defaultMovementConfig: HazardMovementConfig = {
   curve: Math.sin,
   range: 0.72,
-  baseSpeed: 1.9,
-  maxSpeedMultiplier: 1.5,
-  accelerationZone: 0.25,
+  baseSpeed: 1.4,
+  maxSpeedMultiplier: 1.3,
+  accelerationZone: 0.2,
 };
 
 export class Hazard {

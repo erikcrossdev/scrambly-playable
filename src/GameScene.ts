@@ -135,9 +135,9 @@ export class GameScene extends Phaser.Scene {
     this.runner.setRunning(this.state === 'running');
 
     for (const hazard of [...this.hazards]) {
-      const { passed } = hazard.update(this.distance, delta, width, height);
+      const { passed } = hazard.update(this.distance, delta, width, height - 0.05 * height);
 
-      if (this.state === 'running') {
+      if (this.state === 'running' || this.state === 'stopped') {
         if (Phaser.Geom.Intersects.RectangleToRectangle(
           this.runner.getCollisionBounds(),
           hazard.getCollisionBounds(),
