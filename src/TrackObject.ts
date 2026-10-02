@@ -58,9 +58,16 @@ export abstract class TrackObject {
     const horizontalMovement = Phaser.Math.Clamp(this.movementConfig.curve(this.phase), -1, 1);
     this.x = width / 2 + horizontalMovement * width * 0.29 * this.movementConfig.range;
     this.y = height * 0.16 + (height * 0.76 - height * 0.16) * this.progress;
-    this.setVisualTransform(this.x, this.y, this.scale);
+    this.setVisualTransform(this.x, this.y, this.scale, this.getFogTint());
 
     return { passed: this.progress > 1.18 };
+  }
+
+  protected getFogTint() {
+    const brightness = Math.round(
+      Phaser.Math.Linear(119, 255, Phaser.Math.Clamp(this.progress, 0, 1)),
+    );
+    return (brightness << 16) | (brightness << 8) | brightness;
   }
 
   playCollisionParticles(tint: number, quantity: number) {
@@ -93,7 +100,7 @@ export abstract class TrackObject {
     this.scene.time.delayedCall(600, () => emitter.destroy());
   }
 
-  protected abstract setVisualTransform(x: number, y: number, scale: number): void;
+  protected abstract setVisualTransform(x: number, y: number, scale: number, tint: number): void;
 
   abstract getCollisionBounds(): Phaser.Geom.Rectangle;
 

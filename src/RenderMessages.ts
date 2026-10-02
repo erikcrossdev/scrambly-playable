@@ -1,11 +1,13 @@
 import Phaser from 'phaser';
-import type { PlayerScore } from './PlayerRecord';
+import type { PlayerScore, RecordRunResult } from './PlayerRecord';
 
 export class RenderMessages {
   readonly ctaButton: Phaser.GameObjects.Rectangle;
   readonly muteButton: Phaser.GameObjects.Text;
 
   private readonly scene: Phaser.Scene;
+  private readonly bestScoreCtaButton: Phaser.GameObjects.Rectangle;
+  private readonly bestScoreCtaText: Phaser.GameObjects.Text;
   private readonly titleText: Phaser.GameObjects.Text;
   private readonly bestScoreText: Phaser.GameObjects.Text;
   private readonly distanceText: Phaser.GameObjects.Text;
@@ -77,6 +79,23 @@ export class RenderMessages {
       color: '#FFF6E8',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(11);
+
+    this.bestScoreCtaButton = scene.add.rectangle(
+      width / 2,
+      height / 2,
+      Math.min(280, width * 0.8),
+      58,
+      0xf58324,
+    ).setDepth(20).setInteractive({ useHandCursor: true }).setVisible(false);
+    this.bestScoreCtaText = scene.add.text(width / 2, height / 2, 'NEW BEST! TAP TO CLAIM', {
+      fontSize: '17px',
+      color: '#FFF6E8',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(21).setVisible(false);
+    this.bestScoreCtaButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Event) => {
+      event.stopPropagation();
+      console.log('CTA clicked — demo only');
+    });
   }
 
   setDistance(distance: number) {
@@ -111,9 +130,17 @@ export class RenderMessages {
     this.instructionText.setText('Hazards keep moving while you wait');
   }
 
-  showDefeated() {
+  showDefeated(recordResult: RecordRunResult) {
     this.stateText.setText('RUN ENDED').setColor('#FF7777');
     this.instructionText.setText('Tap or click to restart');
+    this.bestScoreCtaButton.setVisible(recordResult.showBestScoreCta);
+    this.bestScoreCtaText.setVisible(recordResult.showBestScoreCta);
+  }
+
+  isUiControlUnderPointer(currentlyOver: Phaser.GameObjects.GameObject[]) {
+    return currentlyOver.includes(this.ctaButton)
+      || currentlyOver.includes(this.muteButton)
+      || currentlyOver.includes(this.bestScoreCtaButton);
   }
 
   layout() {
@@ -128,5 +155,8 @@ export class RenderMessages {
     this.ctaButton.setPosition(width / 2, height * 0.95)
       .setSize(Math.min(220, width * 0.75), 40);
     this.ctaText.setPosition(width / 2, height * 0.95);
+    this.bestScoreCtaButton.setPosition(width / 2, height / 2)
+      .setSize(Math.min(280, width * 0.8), 58);
+    this.bestScoreCtaText.setPosition(width / 2, height / 2);
   }
 }

@@ -9,6 +9,7 @@ const platformScale = 0.5;
 
 export abstract class Hazard extends TrackObject {
   private readonly container: Phaser.GameObjects.Container;
+  private readonly platform: Phaser.GameObjects.Sprite;
 
   static preload(scene: Phaser.Scene) {
    
@@ -38,11 +39,13 @@ export abstract class Hazard extends TrackObject {
      0x100b1b,
      0.5,
    ));
-   this.container.add(scene.add.sprite(0, 0, platformTextureKey, 0).setScale(platformScale));
+   this.platform = scene.add.sprite(0, 0, platformTextureKey, 0).setScale(platformScale);
+   this.container.add(this.platform);
   }
 
-  protected setVisualTransform(x: number, y: number, scale: number) {
+  protected setVisualTransform(x: number, y: number, scale: number, tint: number) {
    this.container.setPosition(x, y).setScale(scale);
+   this.platform.setTint(tint);
   }
 
   getCollisionBounds() {

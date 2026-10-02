@@ -61,8 +61,8 @@ export class Coin extends TrackObject {
     }
   }
 
-  protected setVisualTransform(x: number, y: number, scale: number) {
-    this.sprite.setPosition(x, y).setScale(scale);
+  protected setVisualTransform(x: number, y: number, scale: number, tint: number) {
+    this.sprite.setPosition(x, y).setScale(scale).setTint(tint);
   }
 
  getCollisionBounds() {

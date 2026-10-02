@@ -29,7 +29,8 @@ export class GameScene extends Phaser.Scene {
   private coins: Coin[] = [];
   private coinCount = 0;
   private track!: Phaser.GameObjects.Graphics;
-  private road!: Phaser.GameObjects.Rectangle;
+  private road!: Phaser.GameObjects.Graphics;
+  private trackTiles!: Phaser.GameObjects.Graphics;
   private runner!: RunnerPlayer;
   private messages!: RenderMessages;
   private playerRecord!: PlayerRecord;
@@ -79,10 +80,9 @@ export class GameScene extends Phaser.Scene {
     RunnerPlayer.createAnimation(this);
     Coin.createAnimation(this);
 
-    this.road = this.add.rectangle(0, 0, 0, 0, 0x30254a)
-      .setStrokeStyle(4, 0x70588b)
-      .setDepth(-3);
-    this.track = this.add.graphics().setDepth(-2);
+    this.road = this.add.graphics().setDepth(-3);
+    this.trackTiles = this.add.graphics().setDepth(-2);
+    this.track = this.add.graphics().setDepth(-1);
     this.drawTrack();
 
     this.playerRecord = new PlayerRecord();
@@ -125,6 +125,7 @@ export class GameScene extends Phaser.Scene {
     if (this.state === 'running') {
       this.distance += delta * 0.18;
       this.messages.setDistance(this.distance);
+      this.drawTrack();
 
       while (this.distance >= this.nextHazardDistance) {
         this.spawnHazard(this.distance + this.spawnHazardsDistance, this.spawnPairedHazards);
@@ -212,7 +213,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handlePointerAction(_pointer: Phaser.Input.Pointer, currentlyOver: Phaser.GameObjects.GameObject[]) {
-    if (currentlyOver.includes(this.messages.ctaButton) || currentlyOver.includes(this.messages.muteButton)) return;
+    if (this.messages.isUiControlUnderPointer(currentlyOver)) return;
     this.enableAudioAfterInteraction();
     this.handleAction();
   }
@@ -226,10 +227,10 @@ export class GameScene extends Phaser.Scene {
       distance: Math.floor(this.distance / 100),
       coins: this.coinCount,
     });
-    if (result.isNewBest) this.playSound(soundKeys.bestScore);
+    if (result.showBestScoreCta) this.playSound(soundKeys.bestScore);
     if (result.score) this.messages.setBestScore(result.score);
     this.playSound(soundKeys.gameOver);
-    this.messages.showDefeated();
+    this.messages.showDefeated(result);
   }
 
   private enableAudioAfterInteraction() {
@@ -305,18 +306,72 @@ export class GameScene extends Phaser.Scene {
 
   private drawTrack() {
     const { width, height } = this.scale;
-    const roadWidth = width * 0.72;
-    const roadHeight = height * 0.72;
-    const roadCenterY = height * 0.5;
+    const centerX = width / 2;
     const trackTop = height * 0.14;
     const trackBottom = height * 0.86;
-    this.road.setPosition(width / 2, roadCenterY).setSize(roadWidth, roadHeight);
+    const topHalfWidth = width * 0.08;
+    const bottomHalfWidth = width * 0.36;
+    const rowCount = 12;
+    const columnCount = 8;
+    const rowScroll = (this.distance / 120) % 1;
+
+    const rowY = (row: number) => {
+      const perspective = Phaser.Math.Clamp(row, 0, 1);
+      return trackTop + (perspective ** 1.6) * (trackBottom - trackTop);
+    };
+    const rowHalfWidth = (row: number) => topHalfWidth
+      + (bottomHalfWidth - topHalfWidth) * Phaser.Math.Clamp(row, 0, 1);
+    const pointAt = (row: number, column: number) => {
+      const halfWidth = rowHalfWidth(row);
+      return {
+        x: centerX - halfWidth + (2 * halfWidth * column) / columnCount,
+        y: rowY(row),
+      };
+    };
+
+    this.road.clear();
+    this.road.fillStyle(0x30254a, 1);
+    this.road.beginPath();
+    this.road.moveTo(centerX - topHalfWidth, trackTop);
+    this.road.lineTo(centerX + topHalfWidth, trackTop);
+    this.road.lineTo(centerX + bottomHalfWidth, trackBottom);
+    this.road.lineTo(centerX - bottomHalfWidth, trackBottom);
+    this.road.closePath();
+    this.road.fillPath();
+    this.road.lineStyle(4, 0x70588b, 1);
+    this.road.strokePath();
+
+    this.trackTiles.clear();
+    for (let worldRow = -1; worldRow <= rowCount; worldRow += 1) {
+      const unclippedTop = (worldRow + rowScroll) / rowCount;
+      const unclippedBottom = (worldRow + 1 + rowScroll) / rowCount;
+      if (unclippedBottom <= 0 || unclippedTop >= 1) continue;
+      const top = Phaser.Math.Clamp(unclippedTop, 0, 1);
+      const bottom = Phaser.Math.Clamp(unclippedBottom, 0, 1);
+
+      for (let column = 0; column < columnCount; column += 1) {
+        const topLeft = pointAt(top, column);
+        const topRight = pointAt(top, column + 1);
+        const bottomRight = pointAt(bottom, column + 1);
+        const bottomLeft = pointAt(bottom, column);
+        const color = (worldRow + column + 1) % 2 === 0 ? 0x40345c : 0x35294f;
+        this.trackTiles.fillStyle(color, 0.88);
+        this.trackTiles.beginPath();
+        this.trackTiles.moveTo(topLeft.x, topLeft.y);
+        this.trackTiles.lineTo(topRight.x, topRight.y);
+        this.trackTiles.lineTo(bottomRight.x, bottomRight.y);
+        this.trackTiles.lineTo(bottomLeft.x, bottomLeft.y);
+        this.trackTiles.closePath();
+        this.trackTiles.fillPath();
+      }
+    }
+
     this.track.clear();
-    this.track.lineStyle(2, 0x70588b, 0.65);
+    this.track.lineStyle(2, 0x70588b, 0.85);
     this.track.lineBetween(width / 2, trackTop, width / 2, trackBottom);
     this.track.lineStyle(2, 0x57436f, 0.8);
-    this.track.lineBetween(width / 2 - roadWidth * 0.25, trackTop, width / 2 - roadWidth * 0.25, trackBottom);
-    this.track.lineBetween(width / 2 + roadWidth * 0.25, trackTop, width / 2 + roadWidth * 0.25, trackBottom);
+    this.track.lineBetween(centerX - topHalfWidth * 0.5, trackTop, centerX - bottomHalfWidth * 0.5, trackBottom);
+    this.track.lineBetween(centerX + topHalfWidth * 0.5, trackTop, centerX + bottomHalfWidth * 0.5, trackBottom);
   }
 
   private refreshLayout() {

@@ -6,6 +6,7 @@ export interface PlayerScore {
 export interface RecordRunResult {
   score: PlayerScore | null;
   isNewBest: boolean;
+  showBestScoreCta: boolean;
 }
 
 const storageKey = 'scrambly-player-record';
@@ -44,15 +45,14 @@ export class PlayerRecord {
   recordRun(score: PlayerScore) {
     const isFirstRecord = this.bestScore === null;
     const beatsBest = this.bestScore !== null
-      && ((score.coins > this.bestScore.coins
-      && score.distance < this.bestScore.distance ) || (score.coins < this.bestScore.coins));
+      && score.coins > this.bestScore.coins;
 
     if (!isFirstRecord && !beatsBest) {
-      return { score: this.bestScore, isNewBest: false };
+      return { score: this.bestScore, isNewBest: false, showBestScoreCta: false };
     }
 
     localStorage.setItem(storageKey, JSON.stringify(score));
     this.bestScore = score;
-    return { score: this.bestScore, isNewBest: true };
+    return { score: this.bestScore, isNewBest: true, showBestScoreCta: true };
   }
 }
