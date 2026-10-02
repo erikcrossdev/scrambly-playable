@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import foxBack from './assets/foxBack.png';
+import foxDefeated from './assets/fox_defeated.png';
 
 export class RunnerPlayer {
   private static readonly animationKey = 'runner-run';
@@ -10,6 +11,7 @@ export class RunnerPlayer {
   private readonly sprite: Phaser.GameObjects.Sprite;
   private isRunning = false;
   private hasStartedRunning = false;
+  private isDefeated = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     this.sprite = scene.add.sprite(x, y, 'runner', '0').setScale(RunnerPlayer.displayScale);
@@ -23,7 +25,10 @@ export class RunnerPlayer {
      if (!scene.textures.exists('runner')) {
        scene.load.image('runner', foxBack);
     }
-  }
+     if (!scene.textures.exists('runner-defeated')) {
+       scene.load.image('runner-defeated', foxDefeated);
+     }
+   }
 
    static createAnimation(scene: Phaser.Scene) {
      RunnerPlayer.createRunnerFrames(scene);
@@ -68,6 +73,7 @@ export class RunnerPlayer {
   }
 
   setRunning(running: boolean) {
+    if (this.isDefeated) return;
     if (running === this.isRunning) return;
 
     this.isRunning = running;
@@ -81,5 +87,14 @@ export class RunnerPlayer {
     } else if (this.hasStartedRunning) {
       this.sprite.anims.pause();
     }
+  }
+
+  setDefeated() {
+    if (this.isDefeated) return;
+
+    this.isDefeated = true;
+    this.isRunning = false;
+    this.sprite.stop();
+    this.sprite.setTexture('runner-defeated');
   }
 }

@@ -56,9 +56,9 @@ export class GameScene extends Phaser.Scene {
     this.track = this.add.graphics();
     this.drawTrack();
 
-    this.titleText = this.add.text(this.scale.width / 2, this.scale.height * 0.015, 'SCRAMBLY TIMING', {
+    this.titleText = this.add.text(this.scale.width / 2, this.scale.height * 0.01, 'SCRAMBLY TIMING', {
       fontSize: '24px',
-      color: '#FFF6E8',
+      color: '#F58324',
       fontStyle: 'bold',
       letterSpacing: 2,
     }).setOrigin(0.5);
@@ -104,8 +104,7 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-SPACE', this.handleAction, this);
     this.ctaButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Event) => {
       event.stopPropagation();
-      console.log('CTA clicked — demo only');
-      alert('CTA clicked — demo only');
+      window.open('https://scrambly.io/', '_blank', 'noopener,noreferrer');
     });
     this.scale.on('resize', this.handleResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
@@ -201,6 +200,7 @@ export class GameScene extends Phaser.Scene {
     if (this.state === 'gameover') return;
 
     this.state = 'gameover';
+    this.runner.setDefeated();
     this.stateText.setText('RUN ENDED').setColor('#FF7777');
     this.instructionText.setText('Tap or click to restart');
   }
@@ -233,14 +233,14 @@ export class GameScene extends Phaser.Scene {
 
   private refreshLayout() {
     const { width, height } = this.scale;
-    this.titleText.setPosition(width / 2, height * 0.075);
-    this.distanceText.setPosition(width * 0.35, height * 0.13);
-    this.coinText.setPosition(width * 0.78, height * 0.13);
+    this.titleText.setPosition(width / 2, height * 0.035);
+    this.distanceText.setPosition(width * 0.35, height * 0.11);
+    this.coinText.setPosition(width * 0.78, height * 0.11);
     this.stateText.setPosition(width / 2, height * 0.88);
-    this.instructionText.setPosition(width / 2, height * 0.93);
-    this.ctaButton.setPosition(width / 2, height * 0.985)
+    this.instructionText.setPosition(width / 2, height * 0.90);
+    this.ctaButton.setPosition(width / 2, height * 0.95)
       .setSize(Math.min(220, width * 0.75), 40);
-    this.ctaText.setPosition(width / 2, height * 0.995);
+    this.ctaText.setPosition(width / 2, height * 0.95);
   }
 
   private handleResize() {

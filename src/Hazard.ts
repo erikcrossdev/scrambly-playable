@@ -38,7 +38,7 @@ export class Hazard {
     this.phase = Math.random() * Math.PI * 2;
     this.container = scene.add.container(0, 0);
 
-    this.container.add(scene.add.ellipse(0, 18, 58, 16, 0x100b1b, 0.5));
+    this.container.add(scene.add.ellipse(0, 15, 48, 16, 0x100b1b, 0.5));
     this.container.add(
       scene.add.rectangle(0, 0, this.width, this.height, 0xe85757)
         .setStrokeStyle(3, 0xffb1a2),
